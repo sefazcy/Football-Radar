@@ -14,13 +14,13 @@ export default function SearchArea({ onSearch, loading }) {
         <form className="search-area" onSubmit={handleSubmit}>
             <input
                 type="text"
-                placeholder="Takım adı girin (örn. Galatasaray)..."
+                placeholder="Enter team name (e.g. Arsenal)..."
                 value={term}
                 onChange={(e) => setTerm(e.target.value)}
                 disabled={loading}
             />
             <button type="submit" disabled={loading}>
-                {loading ? 'Aranıyor...' : 'Ara'}
+                {loading ? 'Searching...' : 'Search'}
             </button>
         </form>
     )

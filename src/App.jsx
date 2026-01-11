@@ -39,7 +39,7 @@ function App() {
             const teamResponse = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${term}`)
 
             if (!teamResponse.data.teams) {
-                throw new Error('Takım bulunamadı. Lütfen başka bir isim deneyin.')
+                throw new Error('Team not found. Please try another name.')
             }
 
             const foundTeam = teamResponse.data.teams[0]
@@ -54,7 +54,7 @@ function App() {
 
         } catch (err) {
             console.error(err)
-            setError(err.message || 'Bir hata oluştu')
+            setError(err.message || 'An error occurred')
         } finally {
             setLoading(false)
         }
@@ -81,11 +81,11 @@ function App() {
                 setLeagueMatches(response.data.events)
             } else {
                 setLeagueMatches([])
-                setError('Bu lig için maç verisi bulunamadı.')
+                setError('No match data found for this league.')
             }
         } catch (err) {
             console.error(err)
-            setError('Maç verileri çekilirken bir hata oluştu')
+            setError('An error occurred while fetching match data')
         } finally {
             setLoading(false)
         }
@@ -111,7 +111,7 @@ function App() {
 
                 {loading && !team && !leagueMatches.length && (
                     <div style={{ textAlign: 'center', margin: '2rem' }}>
-                        <div className="loader">Yükleniyor...</div>
+                        <div className="loader">Loading...</div>
                     </div>
                 )}
 
@@ -125,7 +125,7 @@ function App() {
                 {activeLeague && leagueMatches.length > 0 && !team && (
                     <MatchList
                         matches={leagueMatches}
-                        title="Bu Haftanın Sonuçları"
+                        title="Results of the Week"
                     />
                 )}
 

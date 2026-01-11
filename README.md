@@ -1,44 +1,52 @@
-# Futbol Skorları & Takım Bilgisi Uygulaması
+# Football Radar App
 
-Bu proje React kullanılarak geliştirilmiş, TheSportsDB API üzerinden veri çeken bir web uygulamasıdır.
+This project is a web application developed using React that fetches data from TheSportsDB API to display football team details and match results.
 
-## Özellikler
-- Takım Arama
-- Takım Detaylarını Görüntüleme (Logo, Açıklama, Kuruluş Yılı)
-- Son 5 Maçın Skorlarını Listeleme
-- Maç Sonucuna Göre Renklendirme (Galibiyet: Yeşil, Mağlubiyet: Kırmızı, Beraberlik: Gri)
-- Responsive Tasarım (Karanlık Mod)
+## Features
+- **Team Search**: Search for any football team.
+- **Team Details**: View team logo, description, and establishment year.
+- **Match Results**: List the scores of the last 5 matches.
+- **Dynamic Styling**: Color-coded badges for Win (Green), Loss (Red), and Draw (Gray).
+- **League Overview**: View this week's results for major leagues.
+- **Responsive Design**: Optimized for mobile and desktop with a dark mode interface.
 
-## Kurulum ve Çalıştırma
-
-Bu projeyi çalıştırmak için bilgisayarınızda **Node.js** yüklü olmalıdır.
-
-1. Proje klasörüne gidin:
-   ```bash
-   cd football-app
-   ```
-
-2. Bağımlılıkları yükleyin:
-   ```bash
-   npm install
-   ```
-
-3. Uygulamayı başlatın:
-   ```bash
-   npm run dev
-   ```
-
-## Kullanılan Teknolojiler
+## Technologies Used
 - React
 - Vite
 - Axios
 - CSS3 (Variables, Flexbox, Grid)
 - TheSportsDB API
 
-## API Hakkında
-Kullanılan API: `https://www.thesportsdb.com/api/v1/json/3/`
-- `/searchteams.php?t={TeamQuery}`
+## API Information
+This project uses **TheSportsDB API**: [https://www.thesportsdb.com/](https://www.thesportsdb.com/)
+Key endpoints used:
+- `/searchteams.php?t={TeamName}`
 - `/eventslast.php?id={TeamID}`
+- `/eventsround.php?id={LeagueID}&r={Round}&s={Season}`
 
-## Ekran Görüntüsü
-*(Ekran görüntüsünü buraya ekleyiniz)*
+## Installation and Setup
+
+To run this project, you need **Node.js** installed on your system.
+
+1. **Clone the repository:**
+   ```bash
+   git clone https://github.com/sefazcy/Football-Radar.git
+   cd Football-Radar
+   ```
+
+2. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
+3. **Start the application:**
+   ```bash
+   npm run dev
+   ```
+
+## Screenshot
+![App Screenshot](https://via.placeholder.com/800x450?text=App+Screenshot+Placeholder)
+*(Please replace this placeholder with an actual screenshot of the application)*
+
+## License
+This project is for educational purposes as part of the Web Programming course final assignment.

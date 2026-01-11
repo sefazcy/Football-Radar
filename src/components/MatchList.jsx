@@ -25,16 +25,16 @@ export default function MatchList({ matches, teamId, title }) {
 
     return (
         <div className="match-list">
-            <h3 style={{ borderBottom: '1px solid #30363d', paddingBottom: '0.5rem' }}>{title || 'Son 5 Maç'}</h3>
+            <h3 style={{ borderBottom: '1px solid #30363d', paddingBottom: '0.5rem' }}>{title || 'Last 5 Matches'}</h3>
             {matches.map((match) => {
                 // Mock weather based on match ID to be consistent
                 const getWeather = (id) => {
                     const weathers = [
-                        { icon: '☀️', label: 'Güneşli' },
-                        { icon: '☁️', label: 'Parçalı Bulutlu' },
-                        { icon: '🌧️', label: 'Yağmurlu' },
-                        { icon: '⛈️', label: 'Sağanak' },
-                        { icon: '🌥️', label: 'Kapalı' }
+                        { icon: '☀️', label: 'Sunny' },
+                        { icon: '☁️', label: 'Partly Cloudy' },
+                        { icon: '🌧️', label: 'Rainy' },
+                        { icon: '⛈️', label: 'Stormy' },
+                        { icon: '🌥️', label: 'Overcast' }
                     ]
                     const index = parseInt(id) % weathers.length
                     return weathers[index]
