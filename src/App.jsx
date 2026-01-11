@@ -115,12 +115,22 @@ function App() {
                     </div>
                 )}
 
-                {team && (
-                    <>
-                        <TeamInfo team={team} />
-                        <MatchList matches={matches} teamId={team.idTeam} />
-                    </>
-                )}
+                <>
+                    <TeamInfo team={team} />
+                    {Object.entries(matches.reduce((acc, match) => {
+                        const league = match.strLeague || 'Other'
+                        if (!acc[league]) acc[league] = []
+                        acc[league].push(match)
+                        return acc
+                    }, {})).map(([leagueName, leagueMatches]) => (
+                        <MatchList
+                            key={leagueName}
+                            matches={leagueMatches}
+                            teamId={team.idTeam}
+                            title={`${leagueName} Results`}
+                        />
+                    ))}
+                </>
 
                 {activeLeague && leagueMatches.length > 0 && !team && (
                     <MatchList
