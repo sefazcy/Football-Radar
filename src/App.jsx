@@ -54,8 +54,18 @@ function App() {
             setTeam(teamData) // Save the whole object to pass to TeamInfo
 
             // 2. Get Last Matches
+            // Since we fetch the whole season (Free Tier limit), we need to sort and slice here.
             const fixturesResponse = await api.getLastMatches(teamData.team.id)
-            setMatches(fixturesResponse.data.response)
+            const allSeasonMatches = fixturesResponse.data.response || []
+
+            // Sort by date descending (Newest first)
+            const sortedMatches = allSeasonMatches.sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date))
+
+            // Filter only played/live matches and take top 5
+            const validStatuses = ['FT', 'AET', 'PEN', 'LIVE', '1H', '2H', 'HT', 'ET', 'P']
+            const lastMatches = sortedMatches.filter(m => validStatuses.includes(m.fixture.status.short)).slice(0, 5)
+
+            setMatches(lastMatches)
 
         } catch (err) {
             console.error(err)

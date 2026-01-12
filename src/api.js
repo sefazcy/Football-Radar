@@ -33,7 +33,7 @@ export const api = {
     getLeagueMatches: (leagueId, fromDate, toDate) => apiClient.get(`/fixtures`, {
         params: {
             league: leagueId,
-            season: 2024, // 2024-2025 season
+            season: 2025, // Updated to 2025 season based on API response
             from: fromDate,
             to: toDate
         }
