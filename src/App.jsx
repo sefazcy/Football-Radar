@@ -16,6 +16,7 @@ function App() {
     // League View State
     const [activeLeague, setActiveLeague] = useState(LEAGUE_IDS.SUPER_LIG) // Default to Süper Lig
     const [leagueMatches, setLeagueMatches] = useState([])
+    const [leagueTitle, setLeagueTitle] = useState("Upcoming Matches")
 
     // League definitions for Tabs
     const leagues = [
@@ -24,7 +25,6 @@ function App() {
         { id: LEAGUE_IDS.LA_LIGA, name: 'La Liga' },
         { id: LEAGUE_IDS.BUNDESLIGA, name: 'Bundesliga' },
         { id: LEAGUE_IDS.SERIE_A, name: 'Serie A' },
-        //{ id: LEAGUE_IDS.TFF_1_LIG, name: 'TFF 1. Lig' }
     ]
 
     // Load initial league matches (Live/This Week) on mount
@@ -49,23 +49,24 @@ function App() {
                 throw new Error('Team not found. Please try another name.')
             }
 
-            // Get first result (API returns { team: {...}, venue: {...} })
+            // Get first result
             const teamData = teamResults[0]
-            setTeam(teamData) // Save the whole object to pass to TeamInfo
+            setTeam(teamData)
 
             // 2. Get Last Matches
-            // Since we fetch the whole season (Free Tier limit), we need to sort and slice here.
+            // Free Tier limit: 'last' param not allowed, fetch season and slice manually
             const fixturesResponse = await api.getLastMatches(teamData.team.id)
             const allSeasonMatches = fixturesResponse.data.response || []
 
-            // Sort by date descending (Newest first)
+            // Sort: Newest first
             const sortedMatches = allSeasonMatches.sort((a, b) => new Date(b.fixture.date) - new Date(a.fixture.date))
 
-            // Filter only played/live matches and take top 5
+            // Filter: Only started/finished matches
             const validStatuses = ['FT', 'AET', 'PEN', 'LIVE', '1H', '2H', 'HT', 'ET', 'P']
-            const lastMatches = sortedMatches.filter(m => validStatuses.includes(m.fixture.status.short)).slice(0, 5)
+            const playedMatches = sortedMatches.filter(m => validStatuses.includes(m.fixture.status.short))
 
-            setMatches(lastMatches)
+            // Take top 5
+            setMatches(playedMatches.slice(0, 5))
 
         } catch (err) {
             console.error(err)
@@ -81,29 +82,29 @@ function App() {
         setMatches([])
         setLoading(true)
         setError(null)
+        setLeagueTitle("Upcoming Matches")
 
         try {
-            // Calculate date range for "This Week" (e.g. Last 3 days to Next 4 days)
-            const today = new Date()
-            const pastDate = new Date(today)
-            pastDate.setDate(today.getDate() - 3)
-            const futureDate = new Date(today)
-            futureDate.setDate(today.getDate() + 7) // Show upcoming week matches too
-
-            const from = pastDate.toISOString().split('T')[0]
-            const to = futureDate.toISOString().split('T')[0]
-
-            const response = await api.getLeagueMatches(leagueId, from, to)
-
-            // Sort matches: Live first, then by date
-            const events = response.data.response || []
-            events.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
+            // Try fetching UPCOMING matches first
+            let response = await api.getLeagueUpcoming(leagueId)
+            let events = response.data.response || []
 
             if (events.length === 0) {
-                setError('No matches found for this week (Winter Break likely).')
+                // Fallback: If no upcoming matches (e.g. Winter Break), show PAST results
+                setLeagueTitle("Latest Results (Winter Break/Ended)")
+                // Note: 'last' param works for LEAGUES on free tier usually, but if fails, we might need season logic too.
+                // However, free tier usually blocks 'last' everywhere. Let's try.
+                // Check debug result: "Free plans do not have access to the Last parameter." -> Applies globally.
+                // So we can't use getLeaguePast with 'last' param.
+                // Limitation: We can't fetch WHOLE league season (too big) to sort client side easily? 
+                // Actually we can, but it's heavy (380 matches).
+                // API-Football free tier is tricky.
+                // Let's settle for: If no upcoming, show specific error about winter break.
+                setError('No upcoming matches found (League might be on break).')
+            } else {
+                events.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
+                setLeagueMatches(events)
             }
-
-            setLeagueMatches(events)
 
         } catch (err) {
             console.error(err)
@@ -140,7 +141,7 @@ function App() {
             {team && (
                 <>
                     <TeamInfo team={team} />
-                    {/* Group matches by League */}
+                    {/* Group by League */}
                     {Object.entries(matches.reduce((acc, match) => {
                         const leagueName = match.league.name
                         if (!acc[leagueName]) acc[leagueName] = []
@@ -161,7 +162,7 @@ function App() {
             {activeLeague && leagueMatches.length > 0 && !team && (
                 <MatchList
                     matches={leagueMatches}
-                    title="This Week's Fixtures"
+                    title={leagueTitle}
                 />
             )}
 
