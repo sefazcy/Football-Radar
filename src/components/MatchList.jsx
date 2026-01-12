@@ -1,61 +1,63 @@
+import React from 'react'
+
 export default function MatchList({ matches, teamId, title }) {
     if (!matches || matches.length === 0) return null
 
     const getResultClass = (match) => {
-        if (!teamId) return '' // Neutral if no specific team perspective
+        // match.teams.home.id, match.goals.home, etc.
+        if (!teamId) return ''
 
-        // Logic to determine if it was a Win/Loss/Draw for the queried team
-        // Note: The API returns home/away scores. We need to know if our team was home or away.
-        // However, TheSportsDB 'eventslast' doesn't always clearly link 'our team' easily unless we check IDs.
-        // Let's assume we can match by ID.
+        const isHome = match.teams.home.id === teamId
+        const ourScore = isHome ? match.goals.home : match.goals.away
+        const theirScore = isHome ? match.goals.away : match.goals.home
 
-        // Actually, TheSportsDB events usually have idHomeTeam and idAwayTeam
-        const isHome = match.idHomeTeam == teamId
-        const usInfo = isHome ? { score: match.intHomeScore, opponent: match.strAwayTeam } : { score: match.intAwayScore, opponent: match.strHomeTeam }
-        const themInfo = isHome ? { score: match.intAwayScore } : { score: match.intHomeScore }
-
-        // Safely parse scores (they come as strings sometimes)
-        const ourScore = parseInt(usInfo.score || 0)
-        const theirScore = parseInt(themInfo.score || 0)
-
+        if (ourScore === null) return '' // Match hasn't started or no score
         if (ourScore > theirScore) return 'win'
         if (ourScore < theirScore) return 'loss'
         return 'draw'
     }
 
+    const formatTime = (dateString, statusShort) => {
+        if (['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(statusShort)) {
+            return statusShort // Show match time/status directly if live
+        }
+        const date = new Date(dateString)
+        return date.toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })
+    }
+
+    const formatDate = (dateString) => {
+        const date = new Date(dateString)
+        return date.toLocaleDateString('tr-TR', { day: 'numeric', month: 'short' })
+    }
+
     return (
         <div className="match-list">
-            <h3 style={{ borderBottom: '1px solid #30363d', paddingBottom: '0.5rem' }}>{title || 'Last 5 Matches'}</h3>
+            <h3 style={{ borderBottom: '1px solid #30363d', paddingBottom: '0.5rem' }}>{title || 'Matches'}</h3>
             {matches.map((match) => {
-                // Mock weather based on match ID to be consistent
-                const getWeather = (id) => {
-                    const weathers = [
-                        { icon: '☀️', label: 'Sunny' },
-                        { icon: '☁️', label: 'Partly Cloudy' },
-                        { icon: '🌧️', label: 'Rainy' },
-                        { icon: '⛈️', label: 'Stormy' },
-                        { icon: '🌥️', label: 'Overcast' }
-                    ]
-                    const index = parseInt(id) % weathers.length
-                    return weathers[index]
-                }
-
-                const weather = getWeather(match.idEvent)
-                const time = match.strTime ? match.strTime.substring(0, 5) : '--:--'
+                const resultClass = getResultClass(match)
+                const isLive = ['1H', '2H', 'HT', 'ET', 'P', 'LIVE'].includes(match.fixture.status.short)
 
                 return (
-                    <div key={match.idEvent} className={`match-card ${getResultClass(match)}`}>
-                        <div className="match-info-left" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px', marginRight: '1rem', fontSize: '0.8rem', color: '#8b949e' }}>
-                            <span title={weather.label} style={{ fontSize: '1.2rem', marginBottom: '4px' }}>{weather.icon}</span>
-                            <span>{time}</span>
+                    <div key={match.fixture.id} className={`match-card ${resultClass}`} style={isLive ? { borderLeft: '4px solid #da3633' } : {}}>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', minWidth: '60px', marginRight: '1rem', color: isLive ? '#da3633' : '#8b949e' }}>
+                            <span style={{ fontWeight: 'bold' }}>{formatTime(match.fixture.date, match.fixture.status.short)}</span>
+                            {!isLive && <span style={{ fontSize: '0.75rem' }}>{formatDate(match.fixture.date)}</span>}
                         </div>
+
                         <div className="teams">
-                            <span style={{ textAlign: 'right', flex: 1 }}>{match.strHomeTeam}</span>
-                            <span className="vs">vs</span>
-                            <span style={{ textAlign: 'left', flex: 1 }}>{match.strAwayTeam}</span>
-                        </div>
-                        <div className="score-badge">
-                            {match.intHomeScore} - {match.intAwayScore}
+                            <div style={{ flex: 1, textAlign: 'right', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '10px' }}>
+                                <span style={{ fontWeight: isLive ? 'bold' : 'normal' }}>{match.teams.home.name}</span>
+                                <img src={match.teams.home.logo} alt="" style={{ width: '25px', height: '25px', objectFit: 'contain' }} />
+                            </div>
+
+                            <div className={`score-badge ${isLive ? 'live-score' : ''}`} style={isLive ? { background: '#da3633', color: 'white' } : {}}>
+                                {match.goals.home ?? '-'} - {match.goals.away ?? '-'}
+                            </div>
+
+                            <div style={{ flex: 1, textAlign: 'left', display: 'flex', alignItems: 'center', justifyContent: 'flex-start', gap: '10px' }}>
+                                <img src={match.teams.away.logo} alt="" style={{ width: '25px', height: '25px', objectFit: 'contain' }} />
+                                <span style={{ fontWeight: isLive ? 'bold' : 'normal' }}>{match.teams.away.name}</span>
+                            </div>
                         </div>
                     </div>
                 )

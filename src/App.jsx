@@ -1,56 +1,61 @@
-import { useState } from 'react'
-import axios from 'axios'
+import { useState, useEffect } from 'react'
 import Header from './components/Header'
 import SearchArea from './components/SearchArea'
 import TeamInfo from './components/TeamInfo'
 import MatchList from './components/MatchList'
 import Footer from './components/Footer'
 import LeagueTabs from './components/LeagueTabs'
+import { api, LEAGUE_IDS } from './api'
 
 function App() {
     const [loading, setLoading] = useState(false)
     const [error, setError] = useState(null)
     const [team, setTeam] = useState(null)
-    const [matches, setMatches] = useState([])
+    const [matches, setMatches] = useState([]) // Team matches
 
-    // New state for leagues
-    const [activeLeague, setActiveLeague] = useState(null)
+    // League View State
+    const [activeLeague, setActiveLeague] = useState(LEAGUE_IDS.SUPER_LIG) // Default to Süper Lig
     const [leagueMatches, setLeagueMatches] = useState([])
 
-    // League definitions with current active rounds (Verified for Jan 11, 2026)
+    // League definitions for Tabs
     const leagues = [
-        { id: '4339', name: 'Süper Lig', round: '17' }, // Winter Break (Next: 18 on Jan 17)
-        { id: '4328', name: 'Premier League', round: '21' }, // Latest played (Jan 4-6)
-        { id: '4335', name: 'La Liga', round: '18' }, // Latest played (Jan 2-4)
-        { id: '4331', name: 'Bundesliga', round: '16' }, // Active This Week (Jan 9-11)
-        { id: '4332', name: 'Serie A', round: '20' } // Active This Week (Jan 10-11)
+        { id: LEAGUE_IDS.SUPER_LIG, name: 'Süper Lig' },
+        { id: LEAGUE_IDS.PREMIER_LEAGUE, name: 'Premier League' },
+        { id: LEAGUE_IDS.LA_LIGA, name: 'La Liga' },
+        { id: LEAGUE_IDS.BUNDESLIGA, name: 'Bundesliga' },
+        { id: LEAGUE_IDS.SERIE_A, name: 'Serie A' },
+        //{ id: LEAGUE_IDS.TFF_1_LIG, name: 'TFF 1. Lig' }
     ]
+
+    // Load initial league matches (Live/This Week) on mount
+    useEffect(() => {
+        handleLeagueSelect(activeLeague)
+    }, [])
 
     const searchTeam = async (term) => {
         setLoading(true)
         setError(null)
         setTeam(null)
         setMatches([])
-        setActiveLeague(null) // Clear active league when searching
+        setActiveLeague(null)
         setLeagueMatches([])
 
         try {
-            // 1. Search for the team
-            const teamResponse = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/searchteams.php?t=${term}`)
+            // 1. Search Team
+            const response = await api.searchTeam(term)
+            const teamResults = response.data.response
 
-            if (!teamResponse.data.teams) {
+            if (!teamResults || teamResults.length === 0) {
                 throw new Error('Team not found. Please try another name.')
             }
 
-            const foundTeam = teamResponse.data.teams[0]
-            setTeam(foundTeam)
+            // Get first result (API returns { team: {...}, venue: {...} })
+            const teamData = teamResults[0]
+            setTeam(teamData) // Save the whole object to pass to TeamInfo
 
-            // 2. Get last 5 matches
-            const matchesResponse = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/eventslast.php?id=${foundTeam.idTeam}`)
-
-            if (matchesResponse.data.results) {
-                setMatches(matchesResponse.data.results)
-            }
+            // 2. Get Last Matches
+            const fixturesResponse = await api.getLastMatches(teamData.team.id)
+            setMatches(fixturesResponse.data.response)
 
         } catch (err) {
             console.error(err)
@@ -61,87 +66,97 @@ function App() {
     }
 
     const handleLeagueSelect = async (leagueId) => {
-        if (leagueId === activeLeague) return // Don't reload if already active
-
+        setActiveLeague(leagueId)
+        setTeam(null)
+        setMatches([])
         setLoading(true)
         setError(null)
-        setTeam(null) // Clear team result when selecting league
-        setMatches([])
-        setActiveLeague(leagueId)
-
-        const selectedLeague = leagues.find(l => l.id === leagueId)
 
         try {
-            // Use eventsround.php with specific round to get CORRECT data for each league
-            // eventspastleague.php is restricted on free tier and returns duplicate mock data
-            // We use s=2025-2026 as the current season.
-            const response = await axios.get(`https://www.thesportsdb.com/api/v1/json/3/eventsround.php?id=${leagueId}&r=${selectedLeague.round}&s=2025-2026`)
+            // Calculate date range for "This Week" (e.g. Last 3 days to Next 4 days)
+            const today = new Date()
+            const pastDate = new Date(today)
+            pastDate.setDate(today.getDate() - 3)
+            const futureDate = new Date(today)
+            futureDate.setDate(today.getDate() + 7) // Show upcoming week matches too
 
-            if (response.data.events) {
-                setLeagueMatches(response.data.events)
-            } else {
-                setLeagueMatches([])
-                setError('No match data found for this league.')
+            const from = pastDate.toISOString().split('T')[0]
+            const to = futureDate.toISOString().split('T')[0]
+
+            const response = await api.getLeagueMatches(leagueId, from, to)
+
+            // Sort matches: Live first, then by date
+            const events = response.data.response || []
+            events.sort((a, b) => new Date(a.fixture.date) - new Date(b.fixture.date))
+
+            if (events.length === 0) {
+                setError('No matches found for this week (Winter Break likely).')
             }
+
+            setLeagueMatches(events)
+
         } catch (err) {
             console.error(err)
-            setError('An error occurred while fetching match data')
+            setError('Could not load league matches.')
         } finally {
             setLoading(false)
         }
     }
 
     return (
-        <>
-            <div className="container">
-                <Header />
-                <SearchArea onSearch={searchTeam} loading={loading} />
+        <div className="container">
+            <Header />
+            <SearchArea onSearch={searchTeam} loading={loading} />
 
-                <LeagueTabs
-                    activeLeagueId={activeLeague}
-                    onLeagueSelect={handleLeagueSelect}
-                    leagues={leagues}
-                />
+            <LeagueTabs
+                activeLeagueId={activeLeague}
+                onLeagueSelect={handleLeagueSelect}
+                leagues={leagues}
+            />
 
-                {error && (
-                    <div style={{ color: '#da3633', textAlign: 'center', marginBottom: '1rem', background: 'rgba(218, 54, 51, 0.1)', padding: '1rem', borderRadius: '8px' }}>
-                        ⚠️ {error}
-                    </div>
-                )}
+            {error && (
+                <div style={{ color: '#da3633', textAlign: 'center', marginBottom: '1rem', background: 'rgba(218, 54, 51, 0.1)', padding: '1rem', borderRadius: '8px' }}>
+                    ⚠️ {error}
+                </div>
+            )}
 
-                {loading && !team && !leagueMatches.length && (
-                    <div style={{ textAlign: 'center', margin: '2rem' }}>
-                        <div className="loader">Loading...</div>
-                    </div>
-                )}
+            {loading && (
+                <div style={{ textAlign: 'center', margin: '2rem' }}>
+                    <div className="loader">Loading...</div>
+                </div>
+            )}
 
+            {/* TEAM VIEW */}
+            {team && (
                 <>
                     <TeamInfo team={team} />
+                    {/* Group matches by League */}
                     {Object.entries(matches.reduce((acc, match) => {
-                        const league = match.strLeague || 'Other'
-                        if (!acc[league]) acc[league] = []
-                        acc[league].push(match)
+                        const leagueName = match.league.name
+                        if (!acc[leagueName]) acc[leagueName] = []
+                        acc[leagueName].push(match)
                         return acc
                     }, {})).map(([leagueName, leagueMatches]) => (
                         <MatchList
                             key={leagueName}
                             matches={leagueMatches}
-                            teamId={team.idTeam}
+                            teamId={team.team.id}
                             title={`${leagueName} Results`}
                         />
                     ))}
                 </>
+            )}
 
-                {activeLeague && leagueMatches.length > 0 && !team && (
-                    <MatchList
-                        matches={leagueMatches}
-                        title="Results of the Week"
-                    />
-                )}
+            {/* LEAGUE VIEW */}
+            {activeLeague && leagueMatches.length > 0 && !team && (
+                <MatchList
+                    matches={leagueMatches}
+                    title="This Week's Fixtures"
+                />
+            )}
 
-                <Footer />
-            </div>
-        </>
+            <Footer />
+        </div>
     )
 }
 
