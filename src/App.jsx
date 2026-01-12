@@ -6,7 +6,6 @@ import TeamInfo from './components/TeamInfo'
 import MatchList from './components/MatchList'
 import Footer from './components/Footer'
 import LeagueTabs from './components/LeagueTabs'
-import LiveMatches from './components/LiveMatches'
 
 function App() {
     const [loading, setLoading] = useState(false)
@@ -96,7 +95,6 @@ function App() {
         <>
             <div className="container">
                 <Header />
-                <LiveMatches />
                 <SearchArea onSearch={searchTeam} loading={loading} />
 
                 <LeagueTabs
